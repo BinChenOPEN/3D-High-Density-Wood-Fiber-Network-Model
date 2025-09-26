@@ -1,4 +1,4 @@
-# High-density Wood Fiber Network
+# 3D High-density Wood Fiber Network Models
 Author: Bin Chen
 
 KTH Royal Institute of Technology, Sweden
@@ -6,7 +6,7 @@ KTH Royal Institute of Technology, Sweden
 E-mail 📧: binchen@kth.se or cbbuaa@outlook.com
 
 ## Project summary
-This project aims to generate wood fiber network with very high density (or low porosity). The model can be used to simulate the physical properties of wood fiber network or paper materials.
+This project aims to numerically generate 3D wood fiber network models with very high density (or low porosity). The 3D model can be used to simulate the physical properties of wood fiber network or paper materials. The advantage is the simplicity and high effeciency.
 
 
 ## 📔 Log
