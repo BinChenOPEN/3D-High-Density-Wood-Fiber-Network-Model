@@ -8,11 +8,11 @@
 clear all, close all,
 
 %% set the basic parameters
+fiber_num = 50;
 cell_wall_thick = 4;
 length_small = 500; % size of the volume in x-y plane
 length_large = length_small+200; % generate a large one and then keep only the middle
 fiber_align_mode = 1;% choose between 1 and 2 for isotropic and anisotropic fiber distribution
-fiber_num = 50;
 fiber_width_mean = 60;
 fiber_width_variation = 20;
 mold_type = 1; % The value is selected between 1 and 2. 1 is for spherical shape,
