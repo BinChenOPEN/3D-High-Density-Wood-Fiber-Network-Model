@@ -1,19 +1,29 @@
+% This project is used to generate realistic 3D wood fiber network
+% microstructure using a geometrical method
+
+% Author: Bin Chen
+% E-mail: binchen@kth.se
+% Update: 2025/09/28
+
 clear all, close all,
 
 %% set the basic parameters
 cell_wall_thick = 4;
 length_small = 500; % size of the volume in x-y plane
 length_large = length_small+200; % generate a large one and then keep only the middle
-fiber_align_mode = 1;
+fiber_align_mode = 1;% choose between 1 and 2 for isotropic and anisotropic fiber distribution
 fiber_num = 50;
 fiber_width_mean = 60;
 fiber_width_variation = 20;
-
+mold_type = 1; % The value is selected between 1 and 2. 1 is for spherical shape,
+% while 2 is the wedge shape
+is_molded_WFN = 1; % The value is selected between 0 and 1. 1 will genreate
+% molded WFN, while 0 will skip that.
 angle_std = pi/8; % angle standard deviation for gaussian distribution.
 
 
 %% The folders to save the results
-folder_save_all = ['fiber_save_large_dataset/random_',num2str(fiber_num)];
+folder_save_all = ['Resuts/random_',num2str(fiber_num)];
 
 folder_save_results = fullfile(folder_save_all,'results');
 mkdir(folder_save_results);
@@ -30,12 +40,12 @@ half_offset = (length_large-length_small)/2;
 
 for i = 1:fiber_num
     ratio_volume = 0;
-
+    
     radius(1) = [round(fiber_width_mean+2*fiber_width_variation*(rand(1)-0.5))]; %% parameters to control the fiber size
     radius(2) = round(radius(1)/fiber_width_mean)+cell_wall_thick;
     
     filename_solid = fullfile(folder_single_solid_fibers,['fiber_',num2str(i,'%04d'),'.mat']);
-
+    
     
     file_fiber_solid_all{i} = filename_solid;
     if ~exist(file_fiber_solid_all{i})
@@ -204,5 +214,57 @@ save(fullfile(folder_save_results,'Params.mat'),'Params');
 save(fullfile(folder_save_results,'volum_compress_solid_center_new.mat'),'volum_compress_solid_center_new', '-v7.3');
 
 fprintf('%n structures have been generated...\n')
-% end
+
+
+%% Generate the molded WFN with a given molded shape
+if is_molded_WFN
+    switch mold_type
+        % generate the 3D displacement map
+        case 1
+            %% curved mold
+            [x,y,z] = ndgrid(1:size(w_all_filter,1),1:size(w_all_filter,2),1:size(w_all_filter,3));
+            x = x-(1+size(w_all_filter,1))/2;
+            y = y-(1+size(w_all_filter,1))/2;
+            
+            dist = sqrt(x.^2+y.^2);
+            r = 2000;
+            Mold_Disp = r-r.*cos(asin(dist/r));
+        case 2
+            %% weidge mold
+            [x,y,z] = ndgrid(1:size(w_all_filter,1),1:size(w_all_filter,2),1:size(w_all_filter,3));
+            x = x-(1+size(w_all_filter,1))/2;
+            y = y-(1+size(w_all_filter,1))/2;
+            Mold_Disp = abs(y)*0.2;
+    end
+    
+    %% Combine the compressed displacement maps
+    w_all_curve = w_all_filter+Mold_Disp;
+    save(fullfile(folder_save_results,'w_all_curve.mat'),'w_all_curve', '-v7.3');
+    
+    Lc_curve = ceil(Lc+max(Mold_Disp(:)));
+    
+    %% image interpolation to get the compressed WFNs
+    parfor i = 1:size_vol_all(1)
+        [y,z] = ndgrid(1:size_vol_all(2),1:size_vol_all(3));
+        z_new = z+squeeze(w_all_curve(i,:,:));
+        slice_volume = double(squeeze(volume_all_solid(i,:,:)));
+        
+        F = scatteredInterpolant(y(:),z_new(:),slice_volume(:),'linear','none');
+        
+        [y_comp,z_comp] = ndgrid(1:size_vol_all(2),1:Lc_curve);
+        Vq = F(y_comp(:),z_comp(:));
+        volum_compress_curve(i,:,:) = reshape(Vq,[size_vol_all(2),Lc_curve]);
+    end
+    volum_compress_curve_clean = volum_compress_curve;
+    [x,y,z] = ndgrid(1:size(volum_compress_curve,1),...
+        1:size(volum_compress_curve,2),...
+        1:size(volum_compress_curve,3));
+    % The compressed WFN network is not perfect due to interpolation. We need
+    % to remove all the bad points outside the compressed WFNs
+    volum_compress_curve_clean(z<Mold_Disp(:,:,1:size(volum_compress_curve,3))) = 0;
+    volum_compress_curve_clean(z>Lc+Mold_Disp(:,:,1:size(volum_compress_curve,3))) = 0;
+    % Save the 3D model
+    volum_compress_curve_clean_center = volum_compress_curve_clean(10:end-9,10:end-9,:);
+    save (fullfile(folder_save_results,'volum_compress_curve_clean_center.mat'),'volum_compress_curve_clean_center', '-v7.3');
+end
 
